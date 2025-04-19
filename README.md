@@ -1,9 +1,10 @@
 # 🛍️ Shopping Website
-This is a full-stack shopping website built with
 
-- **Frontend**:React.j
-- **Backend**:Node.js with Express.j
-- **Database**:PostgreSQ
+A full-stack shopping website built with:
+
+- **Frontend**: React.js
+- **Backend**: Node.js with Express.js
+- **Database**: PostgreSQL
 
 ---
 
@@ -17,55 +18,49 @@ Website/
 ├── frontend/              # React frontend
 │   ├── public/
 │   └── src/
-├── shopping.db            # PostgreSQL database file
+├── shopping.db            # PostgreSQL schema and data
 ├── .gitignore
 ├── package.json
 └── README.md
-``
- 
+```
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Clone the Repositor
+### 1. Clone the Repository
 
-
 ```bash
 git clone https://github.com/mindofVishesh/Website.git
 cd Website
-``
- 
+```
 
-### 2. Set Up the Databas
+### 2. Set Up the Database
 
-Ensure PostgreSQL is installed and running on your machie. 
+Ensure PostgreSQL is installed and running.
 
 - **Using pgAdmin**:
-  . Open pgAdmin and create a new database (e.g., `shopping).
-  . Run the SQL script provided in `shopping.db` to set up the necessary tables and daa. 
+  1. Create a new database (e.g., `shopping`).
+  2. Open `shopping.db` and execute the SQL script to initialize the schema.
 
-- **Using psql CLI**:  
+- **Using psql CLI**:
+
 ```bash
-  createdb shopping
-  psql -d shopping -f shopping.db
-  ``
- 
+createdb shopping
+psql -d shopping -f shopping.db
+```
 
-### 3. Configure the Backen
+### 3. Configure the Backend
 
-Navigate to the `backend` directory and install dependencis:
+Navigate to the backend folder and install dependencies:
 
-
 ```bash
 cd backend
 npm install express knex pg cors
-``
-
+```
 
-Create a `db.js` file with the following content, replacing placeholders with your actual database credentias:
+Create `db.js` with the following content:
 
-
 ```javascript
 // backend/db.js
 const knex = require('knex');
@@ -81,80 +76,70 @@ const db = knex({
 });
 
 module.exports = db;
-``
-
+```
 
-Start the backend servr:
+Then start the backend server:
 
-
 ```bash
 node server.js
-``
- 
+```
 
-### 4. Set Up the Fronten
+### 4. Set Up the Frontend
 
-Navigate to the `frontend` directory and install dependencis:
+Navigate to the frontend folder and install dependencies:
 
-
 ```bash
 cd ../frontend
 npm install
-``
-
+```
 
-Start the frontend development servr:
+Start the React development server:
 
-
 ```bash
 npm start
-``
-
+```
 
-The application should now be running at `http://localhost:300`. 
+Visit `http://localhost:3000` to view the website.
 
 ---
 
-## 🤝 Contributig
+## 🤝 Contributing
 
-To contribute to this projct: 
-
-1. **Fork the repository*: Click the "Fork" button at the top right of the [repository page](https://github.com/mindofVishesh/Websie). 
-
+1. **Fork the repo**: Click "Fork" on GitHub.
 2. **Clone your fork**:
-   ```bash
-   git clone https://github.com/your-username/Website.git
-   cd Website
-   ``
- 
 
-3. **Create a new branch**:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ``
- 
+```bash
+git clone https://github.com/your-username/Website.git
+cd Website
+```
 
-4. **Make your changes*: Implement your feature or ix. 
+3. **Create a branch**:
 
-5. **Commit your changes**:
-   ```bash
-   git add .
-   git commit -m "Add your commit message here"
-   ``
- 
+```bash
+git checkout -b feature/your-feature-name
+```
 
-6. **Push to your fork**:
-   ```bash
-   git push origin feature/your-feature-name
-   ``
- 
+4. **Make changes** and commit:
 
-7. **Create a Pull Request*: Navigate to your fork on GitHub and click "Compare & pull requet". 
+```bash
+git add .
+git commit -m "Describe your changes"
+```
+
+5. **Push to your fork**:
+
+```bash
+git push origin feature/your-feature-name
+```
+
+6. **Open a Pull Request** from your fork to the original repo.
 
 ---
 
-## 📄 Licese
+## 📄 License
 
-This project is licensed under the [MIT License](LICESE). 
+This project is licensed under the [MIT License](LICENSE).
 
---
+---
+
+Feel free to open issues or PRs to contribute or suggest improvements!

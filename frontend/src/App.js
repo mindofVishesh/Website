@@ -75,7 +75,7 @@ function Cart() {
   const [products, setProducts] = useState([]);
   const [orderDetails, setOrderDetails] = useState({
     addressid: "",
-    cardnum: "",
+    card_number: "",
     deliverytype: "Standard"
   });
 
@@ -130,7 +130,7 @@ function Cart() {
 
           <div className="form-group">
             <label>Select Credit Card</label>
-            <select onChange={e => setOrderDetails({ ...orderDetails, cardnum: e.target.value })}>
+            <select onChange={e => setOrderDetails({ ...orderDetails, card_number: e.target.value })}>
               {cards.map(c => (
                 <option key={c.card_number} value={c.card_number}>{c.card_number}</option>
               ))}

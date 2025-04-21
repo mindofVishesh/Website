@@ -3,6 +3,7 @@
 const express = require("express");
 const cors = require("cors");
 const knex = require("knex");
+const session = require("express-session");
 
 const db = knex({
   client: "pg",
@@ -17,6 +18,13 @@ const db = knex({
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use(session({
+  secret: "myshop_secret",
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set to true with HTTPS
+}));
 
 // Get all products
 app.get("/api/products", async (req, res) => {
@@ -796,4 +804,83 @@ app.get("/api/cards", async (req, res) => {
   } catch (err) {
     res.status(500).send("Failed to get cards");
   }
+});
+
+// --- Customer Signup (Sequential IDs) ---
+app.post("/api/customers/signup", async (req, res) => {
+  try {
+    const { email, password, first_name, last_name } = req.body;
+
+    // Check for existing email
+    const exists = await db("customer").where({ email }).first();
+    if (exists) return res.status(400).send("Email already in use");
+
+    // Insert and let PostgreSQL generate customerid and cartid
+    const [{ customerid, cartid }] = await db("customer")
+      .insert({
+        first_name,
+        last_name,
+        email,
+        password // Plain text
+      })
+      .returning(["customerid", "cartid"]);
+
+    // Store in session
+    req.session.customerId = customerid;
+    req.session.cartId = cartid;
+
+    // Send login-style response
+    res.json({
+      message: "Signup successful",
+      customerId: customerid,
+      cartId: cartid,
+      customerName: `${first_name} ${last_name}`
+    });
+
+  } catch (err) {
+    console.error("❌ Signup error:", err.message, err.stack);
+    res.status(500).send(err.message || "Signup failed");
+  }
+});
+
+// --- Customer Login ---
+app.post("/api/customers/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await db("customer").where({ email, password }).first();
+
+    if (!user) return res.status(401).send("Invalid credentials");
+    req.session.customerId = user.customerid;
+    req.session.cartId = user.cartid;
+
+    // Force cache and reload session updates in client
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      message: "Login successful",
+      customerId: user.customerid,
+      cartId: user.cartid,
+      customerName: `${user.first_name} ${user.last_name}`
+    });
+  } catch {
+    res.status(500).send("Login failed");
+  }
+});
+
+// --- Staff Login ---
+app.post("/api/staff/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const staff = await db("staff").where({ email, password }).first();
+    if (!staff) return res.status(401).send("Invalid credentials");
+    req.session.staffId = staff.staffid;
+    res.json({ message: "Staff login successful", staffId: staff.staffid });
+  } catch {
+    res.status(500).send("Login failed");
+  }
+});
+
+// --- Logout Route ---
+app.post("/api/logout", (req, res) => {
+  req.session.destroy();
+  res.send("Logged out");
 });

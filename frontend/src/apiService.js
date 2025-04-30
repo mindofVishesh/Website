@@ -39,6 +39,15 @@ const apiService = {
   // --- Checkout ---
   checkout: (checkoutDetails) => api.post('/checkout', checkoutDetails),
 
+  // --- Product manager ---
+  addProduct: (product) => api.post('/products', product),
+
+  updateProduct: (productID, productData) => 
+    api.put(`/products/${productID}`, productData),
+
+  deleteProduct: (productID) => 
+    api.delete(`/products/${productID}`),
+
   // --- Error Handling ---
   handleError: (error) => {
     console.error('API Error:', error);

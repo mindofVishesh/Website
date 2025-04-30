@@ -5,6 +5,7 @@ import './App.css';
 
 import Login from "./Login";
 import Signup from "./Signup";
+import ProductManager from './ProductManager';
 
 // Main App Component with Router
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/admin/products" element={<ProductManager />} />
           </Routes>
         </div>
         <Footer />
@@ -60,7 +62,7 @@ function Navbar() {
         </Link>
         <Link to="/addresses">Addresses</Link>
         <Link to="/cards">Credit Cards</Link>
-
+        <Link to="/admin/products">Manage Products</Link>
         {customerName ? (
           <div className="user-dropdown" onClick={() => setUserMenuOpen(!userMenuOpen)}>
             <span className="user-name">{customerName.split(" ")[0]} ⌄</span>

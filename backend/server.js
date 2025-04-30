@@ -16,6 +16,8 @@ const db = knex({
 });
 
 const app = express();
+const PORT = 3001;
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(session({
@@ -28,6 +30,7 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000 // ✅ 7 days session cookie
   }
 }));
+
 
 app.get("/api/me", async (req, res) => {
   try {
@@ -406,6 +409,7 @@ app.put("/api/cards/:card_number", async (req, res) => {
   }
 });
 
+
 // === Delete a credit card ===
 app.delete("/api/cards/:card_number", async (req, res) => {
   try {
@@ -427,6 +431,86 @@ app.delete("/api/cards/:card_number", async (req, res) => {
     res.status(500).send("Failed to delete card");
   }
 });
+
+app.post('/api/products', async (req, res) => {
+  const { productid, name, price, category, brand, size, description } = req.body;
+
+  // Simple validation
+  if (!productid || !name || !price) {
+    return res.status(400).json({ message: 'Missing required fields: productid, name, price' });
+  }
+
+  try {
+    console.log("📦 Adding product:", req.body);
+
+    await db('product').insert({
+      productid,
+      name,
+      price,
+      category,
+      brand,
+      size,
+      description
+    });
+
+    res.status(201).json({ message: '✅ Product added successfully' });
+  } catch (err) {
+    console.error('❌ Error adding product:', err.message);
+    res.status(500).json({ message: 'Error adding product', error: err.message });
+  }
+});
+
+app.put('/api/products/:productid', async (req, res) => {
+  const { productid } = req.params;
+  const { name, price, category, brand, size, description } = req.body;
+
+  try {
+    console.log(`✏️ Updating product ${productid}:`, req.body);
+
+    const updated = await db('product')
+      .where({ productid })
+      .update({
+        name,
+        price,
+        category,
+        brand,
+        size,
+        description
+      });
+
+    if (updated === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json({ message: '✅ Product updated successfully' });
+  } catch (err) {
+    console.error('❌ Error updating product:', err.message);
+    res.status(500).json({ message: 'Error updating product', error: err.message });
+  }
+});
+
+
+app.delete('/api/products/:productid', async (req, res) => {
+  const { productid } = req.params;
+
+  try {
+    console.log(`🗑️ Deleting product with ID: ${productid}`);
+
+    const deleted = await db('product')
+      .where({ productid })
+      .del();
+
+    if (deleted === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json({ message: '✅ Product deleted successfully' });
+  } catch (err) {
+    console.error('❌ Error deleting product:', err.message);
+    res.status(500).json({ message: 'Error deleting product', error: err.message });
+  }
+});
+
 
 // --- Start server ---
 app.listen(3001, () => {

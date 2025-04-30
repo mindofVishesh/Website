@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import './App.css';
+import { useNavigate, Link } from "react-router-dom";
+import apiService from "./apiService";
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -10,24 +9,20 @@ function Signup() {
   const [last, setLast] = useState("");
   const navigate = useNavigate();
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    axios.post("/api/customers/signup", {
+    try {
+      const res = await apiService.signup({
         email,
         password,
         first_name: first,
         last_name: last
-      })
-        .then((res) => {
-          localStorage.setItem("customerId", res.data.customerId);
-          localStorage.setItem("cartId", res.data.cartId);
-          localStorage.setItem("customerName", `${first} ${last}`);
-          navigate("/");
-          window.location.reload();
-        })
-        .catch(err => {
-          alert(err.response?.data || "Signup failed");
-        });      
+      });
+
+      navigate("/");
+    } catch (err) {
+      alert(err?.response?.data || err.message || "Signup failed");
+    }
   };
 
   return (
@@ -76,6 +71,10 @@ function Signup() {
           <button type="submit" className="primary-button">Create Account</button>
         </div>
       </form>
+
+      <div className="form-group" style={{ marginTop: "1rem", textAlign: "center" }}>
+        <p>Already have an account? <Link to="/login">Login</Link></p>
+      </div>
     </div>
   );
 }

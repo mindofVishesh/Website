@@ -31,34 +31,28 @@ function App() {
 
 // Navigation Bar Component
 function Navbar() {
-  const [cartCount, setCartCount] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const customerName = localStorage.getItem("customerName");
+  const [cartCount, setCartCount] = useState(0);
+  const [customerName, setCustomerName] = useState("");
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "{}");
-      setCartCount(Object.values(cart).reduce((sum, qty) => sum + qty, 0));
-    };
-
-    updateCartCount();
-    window.addEventListener("storage", updateCartCount);
-    window.addEventListener("cartUpdated", updateCartCount);
-
-    return () => {
-      window.removeEventListener("storage", updateCartCount);
-      window.removeEventListener("cartUpdated", updateCartCount);
-    };
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/";
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+      setCustomerName(""); // Clear name from state
+      setCartCount(0); // Optional: reset cart count
+      navigate("/");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
   };
 
   return (
     <nav className="navbar">
-      <div className="logo">🛒 MyShop</div>
+      <div className="logo">
+        <Link to="/">🛒 MyShop</Link>
+      </div>
+
       <div className="nav-links">
         <Link to="/">Home</Link>
         <Link to="/cart" className="cart-link">
@@ -72,12 +66,16 @@ function Navbar() {
             <span className="user-name">{customerName.split(" ")[0]} ⌄</span>
             {userMenuOpen && (
               <div className="user-dropdown-menu">
-                <button onClick={handleLogout} className="logout-button">Logout</button>
+                <button onClick={handleLogout} className="logout-button">
+                  Logout
+                </button>
               </div>
             )}
           </div>
         ) : (
-          <Link to="/login" className="primary-button">Log In / Sign Up</Link>
+          <Link to="/login" className="primary-button">
+            Log In / Sign Up
+          </Link>
         )}
       </div>
     </nav>
@@ -98,19 +96,16 @@ function Home() {
     apiService.getProducts()
       .then(res => {
         setProducts(res.data);
-        
-        // Extract unique categories from products
         const uniqueCategories = [...new Set(res.data.map(p => p.category).filter(Boolean))];
         setCategories(uniqueCategories);
       })
       .catch(err => {
         console.error("Error fetching products:", err);
-        setProducts([]); // Set empty products array on error
+        setProducts([]);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter products based on search and category
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
@@ -118,28 +113,21 @@ function Home() {
   });
 
   const addToCart = (product) => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "{}");
-    cart[product.productid] = (cart[product.productid] || 0) + 1;
-    localStorage.setItem("cart", JSON.stringify(cart));
-    
-    // Dispatch custom event to notify components about cart updates
-    window.dispatchEvent(new Event("cartUpdated"));
-    
-    // Show notification
-    showNotification(`${product.name} added to cart`);
+    apiService.addToCart(product.productid, 1)
+      .then(() => {
+        window.dispatchEvent(new Event("cartUpdated"));
+        showNotification(`${product.name} added to cart`);
+      })
+      .catch(err => alert("Failed to add to cart"));
   };
 
-  // Helper to show notification
   const showNotification = (message) => {
     const notification = document.createElement("div");
     notification.className = "notification";
     notification.textContent = message;
     document.body.appendChild(notification);
-    
-    setTimeout(() => {
-      notification.classList.add("show");
-    }, 10);
-    
+
+    setTimeout(() => notification.classList.add("show"), 10);
     setTimeout(() => {
       notification.classList.remove("show");
       setTimeout(() => document.body.removeChild(notification), 300);
@@ -215,36 +203,23 @@ function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
-  // Get product ID from URL
   const productId = window.location.pathname.split('/').pop();
-  
+
   useEffect(() => {
     setLoading(true);
     apiService.getProduct(productId)
       .then(res => setProduct(res.data))
-      .catch(err => {
-        console.error("Error fetching product details:", err);
-        // Redirect to home if product not found
-        navigate('/');
-      })
+      .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [productId, navigate]);
-  
-  if (loading) {
-    return <div className="loading-spinner">Loading product details...</div>;
-  }
-  
-  if (!product) {
-    return <div className="error-message">Product not found</div>;
-  }
-  
+
   const addToCart = () => {
-    const cart = JSON.parse(localStorage.getItem("cart") || "{}");
-    cart[product.productid] = (cart[product.productid] || 0) + 1;
-    localStorage.setItem("cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("cartUpdated"));
-    navigate('/cart');
+    apiService.addToCart(product.productid, 1)
+      .then(() => {
+        window.dispatchEvent(new Event("cartUpdated"));
+        navigate('/cart');
+      })
+      .catch(err => alert("Failed to add to cart"));
   };
   
   return (
@@ -282,41 +257,53 @@ function Cart() {
   const [cards, setCards] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [orderDetails, setOrderDetails] = useState({
-    addressid: "",
-    cardnum: "",
-    deliverytype: "Standard"
-  });
+  const [orderDetails, setOrderDetails] = useState({ addressid: "", cardnum: "", deliverytype: "Standard" });
   const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
-    setCart(JSON.parse(localStorage.getItem("cart") || "{}"));
-    
-    // Fetch required data
     Promise.all([
+      apiService.fetchCart(),
       apiService.getProducts(),
       apiService.getAddresses(),
       apiService.getCards()
     ])
-    .then(([productsRes, addressesRes, cardsRes]) => {
-      setProducts(productsRes.data);
-      setAddresses(addressesRes.data);
-      setCards(cardsRes.data);
-      
-      // Set default address and card if available
-      if (addressesRes.data.length > 0) {
-        setOrderDetails(prev => ({...prev, addressid: addressesRes.data[0].addressid}));
-      }
-      if (cardsRes.data.length > 0) {
-        setOrderDetails(prev => ({...prev, cardnum: cardsRes.data[0].card_number}));
-      }
-    })
-    .catch(err => console.error("Error fetching data:", err))
-    .finally(() => setLoading(false));
+      .then(([cartRes, productsRes, addressesRes, cardsRes]) => {
+        console.log("✅ Fetched cart data from server:", cartRes.data);
+        console.log("✅ Fetched products:", productsRes.data);
+  
+        const cartArray = cartRes.data;
+  
+        const cartObject = {};
+        for (const item of cartArray) {
+          cartObject[item.productid] = item.buy_amount;
+        }
+  
+        console.log("✅ Cart after conversion to object:", cartObject);
+  
+        setCart(cartObject);
+        setProducts(productsRes.data);
+        setAddresses(addressesRes.data);
+        setCards(cardsRes.data);
+  
+        if (addressesRes.data.length > 0) {
+          setOrderDetails(prev => ({ ...prev, addressid: addressesRes.data[0].addressid }));
+        }
+        if (cardsRes.data.length > 0) {
+          setOrderDetails(prev => ({ ...prev, cardnum: cardsRes.data[0].card_number }));
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error fetching cart/products/addresses/cards:", err);
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  const productList = products.filter(p => cart[p.productid]);
+  
+  // 👉 Cart logic and console logs
+  console.log("🧹 Current cart object in render:", cart);
+  console.log("🛍️ Full products list:", products);
+  const productList = products.filter(p => cart && cart[p.productid] > 0);
+  console.log("🛒 Final productList for Cart page:", productList);
   
   const calculateTotal = () => {
     return productList.reduce((total, p) => {
@@ -328,42 +315,40 @@ function Cart() {
     return orderDetails.deliverytype === "Express" ? 15.99 : 5.99;
   };
   
-  const updateQuantity = (productId, newQuantity) => {
-    const updatedCart = {...cart};
-    
-    if (newQuantity <= 0) {
-      delete updatedCart[productId];
+  const updateQuantity = (productId, quantity) => {
+    if (quantity <= 0) {
+      // Quantity 0 = Remove item from cart
+      apiService.deleteFromCart(productId)
+        .then(() => {
+          const newCart = { ...cart };
+          delete newCart[productId];
+          setCart(newCart);
+          window.dispatchEvent(new Event("cartUpdated"));
+        })
+        .catch(err => alert("Failed to remove item from cart"));
     } else {
-      updatedCart[productId] = newQuantity;
+      // Quantity > 0 = Update buy_amount
+      apiService.updateCart(productId, quantity)
+        .then(() => {
+          const newCart = { ...cart };
+          newCart[productId] = quantity;
+          setCart(newCart);
+          window.dispatchEvent(new Event("cartUpdated"));
+        })
+        .catch(err => alert("Failed to update cart"));
     }
-    
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-    setCart(updatedCart);
-    window.dispatchEvent(new Event("cartUpdated"));
   };
+  
 
   const handleCheckout = () => {
-    // Validate that address and card are selected
-    if (!orderDetails.addressid || !orderDetails.cardnum) {
-      alert("Please select an address and credit card before checkout");
-      return;
-    }
-    
-    apiService.checkout({ 
-      cart, 
-      ...orderDetails,
-      totalAmount: calculateTotal() + getDeliveryFee()
-    })
-    .then(() => {
-      alert("Order placed successfully!");
-      localStorage.removeItem("cart");
-      setCart({});
-      window.dispatchEvent(new Event("cartUpdated"));
-    })
-    .catch(err => {
-      console.error("Error placing order:", err);
-      alert("Failed to place order. Please try again.");
-    });
+    if (!orderDetails.addressid || !orderDetails.cardnum) return alert("Please select address and payment");
+    apiService.checkout(orderDetails)
+      .then(() => {
+        alert("Order placed successfully!");
+        setCart({});
+        window.dispatchEvent(new Event("cartUpdated"));
+      })
+      .catch(err => alert("Checkout failed"));
   };
 
   if (loading) {
@@ -552,10 +537,9 @@ function AddressManager() {
       street_2: "",
       city: "",
       state: "",
-      zip: "",
-      country: "USA"
+      zip: ""
     });
-  };
+  };  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -565,11 +549,11 @@ function AddressManager() {
       apiService.updateAddress(editingId, newAddress)
         .then(() => {
           loadAddresses();
-          setEditingId(null);
           resetForm();
+          setEditingId(null);
           setIsAdding(false);
         })
-        .catch(err => console.error("Error updating address:", err));
+        .catch(err => console.error("❌ Error updating address:", err));
     } else {
       // Add new address
       apiService.addAddress(newAddress)
@@ -578,23 +562,30 @@ function AddressManager() {
           resetForm();
           setIsAdding(false);
         })
-        .catch(err => console.error("Error adding address:", err));
+        .catch(err => console.error("❌ Error adding address:", err));
     }
   };
-
-  const handleDelete = (addressId) => {
+  
+  const handleDelete = (addressid) => {
     if (window.confirm("Are you sure you want to delete this address?")) {
-      apiService.deleteAddress(addressId)
+      apiService.deleteAddress(addressid)
         .then(() => loadAddresses())
-        .catch(err => console.error("Error deleting address:", err));
+        .catch(err => console.error("❌ Error deleting address:", err));
     }
   };
-
+  
   const handleEdit = (address) => {
-    setNewAddress(address);
+    // ✅ Transform backend address object to form state shape
+    setNewAddress({
+      street_1: address.street_1 || "",
+      street_2: address.street_2 || "",
+      city: address.city || "",
+      state: address.state || "",
+      zip: address.zip_code || "" // Map zip_code → zip
+    });
     setEditingId(address.addressid);
     setIsAdding(true);
-  };
+  };  
 
   if (loading && addresses.length === 0) {
     return <div className="loading-spinner">Loading addresses...</div>;
@@ -775,8 +766,6 @@ function CardManager() {
     .then(([cardsRes, addressesRes]) => {
       setCards(cardsRes.data);
       setAddresses(addressesRes.data);
-      
-      // Set default address if available
       if (addressesRes.data.length > 0) {
         setNewCard(prev => ({...prev, addressid: addressesRes.data[0].addressid}));
       }
@@ -787,39 +776,25 @@ function CardManager() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    // Format card number with spaces
     if (name === "card_number") {
-      // Remove non-digits
       const digits = value.replace(/\D/g, "");
-      // Add spaces every 4 digits
       let formatted = "";
       for (let i = 0; i < digits.length; i++) {
-        if (i > 0 && i % 4 === 0) {
-          formatted += " ";
-        }
+        if (i > 0 && i % 4 === 0) formatted += " ";
         formatted += digits[i];
       }
-      // Limit to 19 characters (16 digits + 3 spaces)
       setNewCard(prev => ({...prev, [name]: formatted.slice(0, 19)}));
-    } 
-    // Format expiry date as MM/YY
-    else if (name === "expiry_date") {
+    } else if (name === "expiry_date") {
       const digits = value.replace(/\D/g, "");
       let formatted = digits;
-      
       if (digits.length > 2) {
         formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4);
       }
-      
       setNewCard(prev => ({...prev, [name]: formatted.slice(0, 5)}));
-    } 
-    // Limit CVV to 3-4 digits
-    else if (name === "cvv") {
+    } else if (name === "cvv") {
       const digits = value.replace(/\D/g, "");
       setNewCard(prev => ({...prev, [name]: digits.slice(0, 4)}));
-    } 
-    else {
+    } else {
       setNewCard(prev => ({...prev, [name]: value}));
     }
   };
@@ -836,15 +811,20 @@ function CardManager() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Format card data for submission
+    const [month, year] = newCard.expiry_date.split("/");
+    if (!month || !year || isNaN(month) || isNaN(year) || Number(month) < 1 || Number(month) > 12) {
+      alert("❌ Invalid expiry date. Please use MM/YY format.");
+      return;
+    }
+
+    const formattedExpiryDate = `20${year.padStart(2, "0")}-${month.padStart(2, "0")}-01`;
     const cardData = {
       ...newCard,
-      card_number: newCard.card_number.replace(/\s/g, "") // Remove spaces
+      card_number: newCard.card_number.replace(/\s/g, ""),
+      expiry_date: formattedExpiryDate
     };
-    
+
     if (editingId) {
-      // Update existing card
       apiService.updateCard(editingId, cardData)
         .then(() => {
           apiService.getCards().then(res => setCards(res.data));
@@ -852,40 +832,49 @@ function CardManager() {
           resetForm();
           setIsAdding(false);
         })
-        .catch(err => console.error("Error updating card:", err));
+        .catch(err => console.error("❌ Error updating card:", err));
     } else {
-      // Add new card
       apiService.addCard(cardData)
         .then(() => {
           apiService.getCards().then(res => setCards(res.data));
           resetForm();
           setIsAdding(false);
         })
-        .catch(err => console.error("Error adding card:", err));
+        .catch(err => console.error("❌ Error adding card:", err));
     }
   };
 
   const handleDelete = (cardNumber) => {
+    const normalizedCardNumber = cardNumber.replace(/\s/g, "");
     if (window.confirm("Are you sure you want to delete this card?")) {
-      apiService.deleteCard(cardNumber)
+      apiService.deleteCard(normalizedCardNumber)
         .then(() => apiService.getCards().then(res => setCards(res.data)))
-        .catch(err => console.error("Error deleting card:", err));
+        .catch(err => console.error("❌ Error deleting card:", err));
     }
   };
 
   const handleEdit = (card) => {
-    // Format card number with spaces for display
     const formattedNumber = card.card_number.replace(/(\d{4})(?=\d)/g, "$1 ");
-    
     setNewCard({
-      ...card,
-      card_number: formattedNumber
+      card_number: formattedNumber,
+      cardholder_name: card.cardholder_name || "",
+      expiry_date: formatExpiryForEdit(card.expiry_date),
+      cvv: "",
+      addressid: card.addressid || ""
     });
-    setEditingId(card.card_number);
+    setEditingId(card.card_number.replace(/\s/g, ""));
     setIsAdding(true);
   };
 
-  // Get address information for a card
+  const formatExpiryForEdit = (date) => {
+    if (!date) return "";
+    const parts = date.split("-");
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[0].slice(2)}`;
+    }
+    return "";
+  };
+
   const getAddressForCard = (addressId) => {
     const address = addresses.find(a => a.addressid === addressId);
     if (!address) return "Unknown address";
@@ -896,7 +885,6 @@ function CardManager() {
     return <div className="loading-spinner">Loading payment methods...</div>;
   }
 
-  // Check if user has addresses before allowing to add cards
   const canAddCards = addresses.length > 0;
 
   return (
@@ -937,9 +925,10 @@ function CardManager() {
                 onChange={handleInputChange}
                 placeholder="1234 5678 9012 3456"
                 required
+                disabled={editingId !== null} // ✅ Disable during edit
               />
             </div>
-            
+
             <div className="form-group">
               <label>Cardholder Name</label>
               <input
@@ -951,7 +940,7 @@ function CardManager() {
                 required
               />
             </div>
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label>Expiration Date</label>
@@ -964,7 +953,7 @@ function CardManager() {
                   required
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>CVV</label>
                 <input
@@ -977,7 +966,7 @@ function CardManager() {
                 />
               </div>
             </div>
-            
+
             <div className="form-group">
               <label>Billing Address</label>
               <select
@@ -993,7 +982,7 @@ function CardManager() {
                 ))}
               </select>
             </div>
-            
+
             <div className="form-actions">
               <button type="submit" className="primary-button">
                 {editingId ? "Update Card" : "Save Card"}
@@ -1034,7 +1023,6 @@ function CardManager() {
               <div key={card.card_number} className="card-item">
                 <div className="card-preview">
                   <div className="card-type">
-                    {/* Card type logo based on first digits */}
                     {card.card_number.startsWith('4') ? '💳 Visa' : 
                      card.card_number.startsWith('5') ? '💳 Mastercard' : 
                      card.card_number.startsWith('3') ? '💳 Amex' : 

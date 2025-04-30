@@ -1,30 +1,29 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import './App.css';
+import apiService from "./apiService";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    axios.post("/api/customers/login", { email, password })
-    .then((res) => {
-        localStorage.setItem("customerId", res.data.customerId);
-        localStorage.setItem("cartId", res.data.cartId);
-        localStorage.setItem("customerName", res.data.customerName);
-        navigate("/");
-        window.location.reload();
-    })
-  .catch(() => alert("Invalid login"));
-
+    try {
+      console.log("🚀 Sending login request with:", { email, password });
+      const res = await apiService.login({ email, password });
+      console.log("✅ Login API response:", res.data);
+  
+      navigate("/");
+    } catch (err) {
+      console.error("❌ Login failed - full error object:", err);
+      alert(err?.response?.data || err.message || "Login failed");
+    }
   };
-
+ 
   return (
     <div className="container form-container">
-      <h2>Customer / Staff Login</h2>
+      <h2>Customer Login</h2>
       <form onSubmit={handleLogin}>
         <div className="form-group">
           <label>Email</label>

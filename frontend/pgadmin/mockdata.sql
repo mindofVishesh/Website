@@ -48,7 +48,7 @@ INSERT INTO shopping_cart (cartid, productid, buy_amount) VALUES
 (1002, 2, 1), (1002, 5, 3);
 
 -- Orders
-INSERT INTO "order" (orderid, cartid, date, status, card_num) VALUES
+INSERT INTO "Order" (orderid, cartid, date, status, card_number) VALUES
 (501, 1001, '2024-04-17', 'Shipped', '1234567812345678'),
 (502, 1002, '2024-04-16', 'Delivered', '8765432187654321');
 

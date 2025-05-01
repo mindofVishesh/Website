@@ -5,7 +5,7 @@ const db = knex({
   connection: {
     host: "localhost",
     user: "postgres",           // or your PG user
-    password: "demo",  // the one from pgAdmin
+    password: "Spring@2025",  // the one from pgAdmin
     database: "shopping_db"
   }
 });

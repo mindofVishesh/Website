@@ -35,15 +35,44 @@ function App() {
 function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  const [customerName, setCustomerName] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userType, setUserType] = useState("");
   const navigate = useNavigate();
+
+  const fetchSessionInfo = () => {
+    apiService.getSessionInfo()
+      .then(res => {
+        setUserName(res.data.name);
+        setUserType(res.data.type);
+      })
+      .catch(() => {
+        setUserName("");
+        setUserType("");
+      });
+  };
+
+  useEffect(() => {
+    fetchSessionInfo();
+
+    const handleLoginEvent = () => {
+      fetchSessionInfo();
+    };
+
+    window.addEventListener("loginStatusChanged", handleLoginEvent);
+
+    return () => {
+      window.removeEventListener("loginStatusChanged", handleLoginEvent);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
       await apiService.logout();
-      setCustomerName(""); // Clear name from state
-      setCartCount(0); // Optional: reset cart count
+      setUserName("");
+      setUserType("");
+      setCartCount(0);
       navigate("/");
+      window.dispatchEvent(new Event("loginStatusChanged"));
     } catch (err) {
       console.error("Logout failed", err);
     }
@@ -57,15 +86,24 @@ function Navbar() {
 
       <div className="nav-links">
         <Link to="/">Home</Link>
-        <Link to="/cart" className="cart-link">
-          Cart {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-        </Link>
-        <Link to="/addresses">Addresses</Link>
-        <Link to="/cards">Credit Cards</Link>
-        <Link to="/admin/products">Manage Products</Link>
-        {customerName ? (
+
+        {userType === "customer" && (
+          <>
+            <Link to="/cart" className="cart-link">
+              Cart {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+            </Link>
+            <Link to="/addresses">Addresses</Link>
+            <Link to="/cards">Credit Cards</Link>
+          </>
+        )}
+
+        {userType === "staff" && (
+          <Link to="/admin/products">Manage Products</Link>
+        )}
+
+        {userName ? (
           <div className="user-dropdown" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-            <span className="user-name">{customerName.split(" ")[0]} ⌄</span>
+            <span className="user-name">{userName.split(" ")[0]} ⌄</span>
             {userMenuOpen && (
               <div className="user-dropdown-menu">
                 <button onClick={handleLogout} className="logout-button">
@@ -75,7 +113,7 @@ function Navbar() {
             )}
           </div>
         ) : (
-          <Link to="/login" className="primary-button">
+          <Link to="/login" className="secondary-button" style={{ padding: '0.5rem 1rem' }}>
             Log In / Sign Up
           </Link>
         )}
@@ -317,9 +355,9 @@ function Cart() {
     return orderDetails.deliverytype === "Express" ? 15.99 : 5.99;
   };
   
-  const updateQuantity = (productId, quantity) => {
-    if (quantity <= 0) {
-      // Quantity 0 = Remove item from cart
+  const updateQuantity = (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      // Delete item from cart
       apiService.deleteFromCart(productId)
         .then(() => {
           const newCart = { ...cart };
@@ -329,18 +367,17 @@ function Cart() {
         })
         .catch(err => alert("Failed to remove item from cart"));
     } else {
-      // Quantity > 0 = Update buy_amount
-      apiService.updateCart(productId, quantity)
+      // Update quantity in DB
+      apiService.updateCart(productId, newQuantity)
         .then(() => {
           const newCart = { ...cart };
-          newCart[productId] = quantity;
+          newCart[productId] = newQuantity;
           setCart(newCart);
           window.dispatchEvent(new Event("cartUpdated"));
         })
         .catch(err => alert("Failed to update cart"));
     }
-  };
-  
+  };  
 
   const handleCheckout = () => {
     if (!orderDetails.addressid || !orderDetails.cardnum) return alert("Please select address and payment");

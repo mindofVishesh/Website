@@ -34,18 +34,19 @@ app.use(session({
 
 app.get("/api/me", async (req, res) => {
   try {
-    if (!req.session.customerId) return res.status(401).send("Not logged in");
+    if (req.session.customerId) {
+      const customer = await db("customer").where({ customerid: req.session.customerId }).first();
+      if (!customer) return res.status(404).send("Customer not found");
+      return res.json({ name: `${customer.first_name} ${customer.last_name}`, type: "customer" });
+    }
 
-    const customer = await db("customer")
-      .where({ customerid: req.session.customerId })
-      .first();
+    if (req.session.staffId) {
+      const staff = await db("staff").where({ staffid: req.session.staffId }).first();
+      if (!staff) return res.status(404).send("Staff not found");
+      return res.json({ name: `${staff.first_name} ${staff.last_name}`, type: "staff" });
+    }
 
-    if (!customer) return res.status(404).send("Customer not found");
-
-    res.json({
-      name: `${customer.first_name} ${customer.last_name}`,
-      customerId: customer.customerid
-    });
+    res.status(401).send("Not logged in");
   } catch (err) {
     console.error("❌ Error in /api/me:", err.message);
     res.status(500).send("Failed to fetch session info");
@@ -433,18 +434,20 @@ app.delete("/api/cards/:card_number", async (req, res) => {
 });
 
 app.post('/api/products', async (req, res) => {
-  const { productid, name, price, category, brand, size, description } = req.body;
+  const { name, price, category, brand, size, description } = req.body;
 
-  // Simple validation
-  if (!productid || !name || !price) {
-    return res.status(400).json({ message: 'Missing required fields: productid, name, price' });
+  if (!name || !price) {
+    return res.status(400).json({ message: 'Missing required fields: name, price' });
   }
 
   try {
-    console.log("📦 Adding product:", req.body);
+    // Get the max existing product ID
+    const maxIdRow = await db("product").max("productid as max").first();
+    const nextProductId = (maxIdRow.max || 0) + 1;
 
-    await db('product').insert({
-      productid,
+    // Insert new product with auto-generated ID
+    await db("product").insert({
+      productid: nextProductId,
       name,
       price,
       category,
@@ -453,10 +456,10 @@ app.post('/api/products', async (req, res) => {
       description
     });
 
-    res.status(201).json({ message: '✅ Product added successfully' });
+    res.status(201).json({ message: "✅ Product added successfully", productid: nextProductId });
   } catch (err) {
-    console.error('❌ Error adding product:', err.message);
-    res.status(500).json({ message: 'Error adding product', error: err.message });
+    console.error("❌ Error adding product:", err.message);
+    res.status(500).json({ message: "Error adding product", error: err.message });
   }
 });
 
@@ -511,6 +514,51 @@ app.delete('/api/products/:productid', async (req, res) => {
   }
 });
 
+app.post("/api/staff/login", async (req, res) => {
+  try {
+    const { staffid, password } = req.body;
+    const staff = await db("staff").where({ staffid, password }).first();
+
+    if (!staff) return res.status(401).send("Invalid staff credentials");
+
+    req.session.staffId = staff.staffid;
+    res.json({ message: "Staff login successful", staffId: staff.staffid });
+  } catch (err) {
+    console.error("❌ Staff login error:", err.message);
+    res.status(500).send("Staff login failed");
+  }
+});
+
+app.post('/api/stock/update', async (req, res) => {
+  const { productid, warehouseid, addedQuantity } = req.body;
+
+  if (!productid || !warehouseid || isNaN(addedQuantity)) {
+    return res.status(400).json({ message: 'Missing or invalid fields' });
+  }
+
+  try {
+    const existingStock = await db("stock")
+      .where({ productid, warehouseid })
+      .first();
+
+    if (existingStock) {
+      await db("stock")
+        .where({ productid, warehouseid })
+        .increment("quantity", addedQuantity);
+    } else {
+      await db("stock").insert({
+        productid,
+        warehouseid,
+        quantity: addedQuantity
+      });
+    }
+
+    res.json({ message: '✅ Stock updated successfully' });
+  } catch (err) {
+    console.error("❌ Error updating stock:", err.message);
+    res.status(500).json({ message: 'Error updating stock' });
+  }
+});
 
 // --- Start server ---
 app.listen(3001, () => {

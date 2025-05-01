@@ -18,12 +18,16 @@ function Signup() {
         first_name: first,
         last_name: last
       });
-
+  
+      // ✅ Trigger UI to update
+      window.dispatchEvent(new Event("loginStatusChanged"));
+  
+      // ✅ Redirect to home
       navigate("/");
     } catch (err) {
       alert(err?.response?.data || err.message || "Signup failed");
     }
-  };
+  };  
 
   return (
     <div className="container form-container">

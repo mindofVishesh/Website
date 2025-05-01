@@ -10,9 +10,11 @@ const api = axios.create({
 
 const apiService = {
   // --- Authentication ---
+  getSessionInfo: () => api.get('/me'),
   signup: (user) => api.post('/signup', user),
   login: (user) => api.post('/login', user),
   logout: () => api.post('/logout'),
+  staffLogin: (staff) => api.post('/staff/login', staff),
 
   // --- Products ---
   getProducts: () => api.get('/products'),
@@ -20,7 +22,7 @@ const apiService = {
 
   // --- Cart ---
   addToCart: (productid, quantity) => api.post('/cart', { productid, quantity }),
-  updateCart: (productid, quantity) => api.post('/cart', { productid, quantity }),
+  updateCart: (productid, quantity) => api.put(`/cart/${productid}`, { quantity }),
   deleteFromCart: (productid) => api.delete(`/cart/${productid}`),
   fetchCart: () => api.get('/cart'),
 
@@ -41,12 +43,10 @@ const apiService = {
 
   // --- Product manager ---
   addProduct: (product) => api.post('/products', product),
+  updateProduct: (productID, productData) => api.put(`/products/${productID}`, productData),
+  deleteProduct: (productID) => api.delete(`/products/${productID}`),
+  updateStock: (productid, warehouseid, addedQuantity) => api.post('/stock/update', { productid, warehouseid, addedQuantity }),
 
-  updateProduct: (productID, productData) => 
-    api.put(`/products/${productID}`, productData),
-
-  deleteProduct: (productID) => 
-    api.delete(`/products/${productID}`),
 
   // --- Error Handling ---
   handleError: (error) => {

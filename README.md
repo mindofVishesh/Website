@@ -1,145 +1,117 @@
-# 🛍️ Shopping Website
+# 🛒 MyShop - CS4092 Online Shopping Application
 
-A full-stack shopping website built with:
+## Overview
 
-- **Frontend**: React.js
-- **Backend**: Node.js with Express.js
-- **Database**: PostgreSQL
+**MyShop** is a full-stack online shopping application developed for the CS4092 Database Systems course. The project features a React-based front end, a PostgreSQL backend, and a robust Express.js server that handles customer and staff operations for a digital storefront.
+
+This project implements core e-commerce functionality including customer registration, cart management, order processing, and staff product management. It aligns with the ER model and database schema developed earlier in the course.
 
 ---
 
-## 📁 Project Structure
+## 🎯 Features
+
+### 👤 Customers
+- Signup, login, logout
+- Browse and search for products
+- Add/update/remove products in cart
+- Place orders with delivery and payment selection
+- Manage multiple delivery addresses
+- Manage multiple credit cards with associated billing addresses
+
+### 🧑‍💼 Staff
+- Add, update, and delete products
+- Adjust stock quantities
+- View and manage product details
+
+---
+
+## 📁 Directory Structure
 
 ```bash
-Website/
-├── backend/               # Express.js backend
-│   ├── db.js              # Database connection
-│   └── server.js          # API server
-├── frontend/              # React frontend
-│   ├── public/
-│   └── src/
-├── shopping.db            # PostgreSQL schema and data
-├── .gitignore
-├── package.json
-└── README.md
+├── backend/                 # Express server and PostgreSQL database interactions
+│   └── server.js
+├── frontend/                # React app UI
+│   ├── App.js
+│   ├── apiService.js
+│   ├── App.css
+│   ├── Login.js
+│   ├── Signup.js
+│   ├── ProductManager.js
+│   └── ...
+├── README.md                # Project documentation
+└── ER Diagram + SQL Script  # Included in project repository as separate files
 ```
+
+---
+
+## 🧪 Technologies Used
+
+- **Frontend**: React.js, Vanilla CSS
+- **Backend**: Express.js, Knex.js
+- **Database**: PostgreSQL
+- **Session Handling**: express-session
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/mindofVishesh/Website.git
 cd Website
 ```
 
-### 2. Set Up the Database
+### 2. Set up PostgreSQL Database
 
-Ensure PostgreSQL is installed and running.
+- Create a database named `shopping_db`
+- Run the provided SQL schema script to generate tables and relationships
 
-- **Using pgAdmin**:
-  1. Create a new database (e.g., `shopping`).
-  2. Open `shopping.db` and execute the SQL script to initialize the schema.
-
-- **Using psql CLI**:
-
-```bash
-createdb shopping
-psql -d shopping -f shopping.db
-```
-
-### 3. Configure the Backend
-
-Navigate to the backend folder and install dependencies:
+### 3. Start Backend Server
 
 ```bash
 cd backend
-npm install express knex pg cors
-```
-
-Create `db.js` with the following content:
-
-```javascript
-// backend/db.js
-const knex = require('knex');
-
-const db = knex({
-  client: 'pg',
-  connection: {
-    host: 'localhost',
-    user: 'your_db_user',
-    password: 'your_db_password',
-    database: 'shopping'
-  }
-});
-
-module.exports = db;
-```
-
-Then start the backend server:
-
-```bash
+npm install
 node server.js
 ```
 
-### 4. Set Up the Frontend
+> ⚠️ Make sure your PostgreSQL credentials in `server.js` match your local setup.
 
-Navigate to the frontend folder and install dependencies:
+### 4. Start Frontend
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
-```
-
-Start the React development server:
-
-```bash
 npm start
 ```
 
-Visit `http://localhost:3000` to view the website.
+- Frontend will run at: `http://localhost:3000`
+- Backend will run at: `http://localhost:3001`
 
 ---
 
-## 🤝 Contributing
+## ✅ Project Requirements Mapping
 
-1. **Fork the repo**: Click "Fork" on GitHub.
-2. **Clone your fork**:
-
-```bash
-git clone https://github.com/your-username/Website.git
-cd Website
-```
-
-3. **Create a branch**:
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-4. **Make changes** and commit:
-
-```bash
-git add .
-git commit -m "Describe your changes"
-```
-
-5. **Push to your fork**:
-
-```bash
-git push origin feature/your-feature-name
-```
-
-6. **Open a Pull Request** from your fork to the original repo.
+| Requirement                               | Status  |
+|-------------------------------------------|---------|
+| Customer registration/login/logout        | ✅ Done |
+| Product browsing and search               | ✅ Done |
+| Cart management                           | ✅ Done |
+| Checkout with address and card            | ✅ Done |
+| Address & card CRUD                       | ✅ Done |
+| Staff product management                  | ✅ Done |
+| PostgreSQL schema + ER model              | ✅ Done |
+| Delivery, stock, and order tracking       | ✅ Done |
+| Demo video                                | 🎥 To be submitted |
 
 ---
 
-## 📄 License
+## 👥 Group Contributions
 
-This project is licensed under the [MIT License](LICENSE).
+Each team member has contributed across the ER modeling, schema design, backend API development, and frontend features. A PDF detailing individual contributions is also included in the submission folder.
 
 ---
 
-Feel free to open issues or PRs to contribute or suggest improvements!
+## 📸 Demo Video
+
+A 5-minute demo video walkthrough will be uploaded before the final submission deadline.
